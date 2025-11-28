@@ -4,7 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Tax Invoice Generator</title>
+
+  <!-- html2pdf.js -->
   <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -68,6 +71,9 @@
       background: white;
       padding: 20px;
       margin-top: 20px;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
     }
     table {
       width: 100%;
@@ -76,14 +82,15 @@
     }
     td, th {
       border: 1px solid #000;
-      padding: 8px;
+      padding: 6px;
       vertical-align: top;
+      font-size: 12px;
     }
     .header {
       text-align: center;
-      font-size: 24px;
+      font-size: 20px;
       font-weight: bold;
-      padding: 15px;
+      padding: 10px;
       border: 1px solid #000;
     }
     .bold {
@@ -96,20 +103,25 @@
       text-align: center;
     }
     .terms-delivery {
-      font-size: 12px;
+      font-size: 11px;
     }
+
+    /* Shrink for print/PDF so it fits one A4 page more easily */
     @media print {
+      body {
+        margin: 0;
+        background: white;
+      }
       .input-section {
         display: none;
       }
-      body {
-        background: white;
-        margin: 0;
-      }
       .invoice-container {
-        padding: 0;
+        padding: 10px;
+        transform: scale(0.9);
+        transform-origin: top left;
       }
     }
+
     @media (max-width: 768px) {
       body {
         margin: 10px;
@@ -128,15 +140,16 @@
         margin-bottom: 5px;
       }
       .header {
-        font-size: 20px;
+        font-size: 18px;
       }
     }
+
     @media (max-width: 480px) {
       .invoice-container {
         padding: 10px;
       }
       table {
-        font-size: 12px;
+        font-size: 11px;
       }
       td, th {
         padding: 4px;
@@ -162,7 +175,7 @@
       </div>
       <div class="input-group">
         <label>Vehicle No:</label>
-        <input type="text" id="vehicleNo" placeholder="e.g., 6250&6250" />
+        <input type="text" id="vehicleNo" placeholder="e.g., KA01AB1234" />
       </div>
     </div>
 
@@ -195,7 +208,6 @@
       <button class="download-btn" onclick="downloadInvoice()" id="downloadBtn" style="display: none;">
         Download PDF
       </button>
-      <!-- Optional print button - can be removed if not needed -->
       <button class="print-btn" onclick="window.print()" id="printBtn" style="display: none;">
         Print Invoice
       </button>
@@ -272,9 +284,10 @@
       <tr>
         <td colspan="2" class="terms-delivery">
           <strong>Terms of Delivery:</strong><br />
-          1. Delivery:Delivery as per customer requirement.<br />
-          2. Quality Assurance: All materials supplied will be of VSI quality the and meet the IS standards and specifications.<br />
-          
+          1. Delivery within 7 working days from order confirmation<br />
+          2. Payment terms: 50% advance, 50% on delivery<br />
+          3. Material quality as per IS standards<br />
+          4. Free delivery within 50km radius
         </td>
       </tr>
       <tr>
@@ -327,226 +340,224 @@
       <tr>
         <td style="width: 50%;" rowspan="2">
           <div class="bold">Declaration</div>
-          <div style="margin-top: 20px;">We declare that this invoice shows the actual price of the goods</div>
+          <div style="margin-top: 20px;">
+            We declare that this invoice shows the actual price of the goods
+          </div>
         </td>
         <td colspan="3" class="bold right-align">SAGAR ENTERPRISES</td>
       </tr>
       <tr>
-        <td colspan="3" style="height: 80px; vertical-align: bottom;" class="bold right-align">
+        <td colspan="3" style="height: 60px; vertical-align: bottom;" class="bold right-align">
           Authorised Signatory
         </td>
       </tr>
     </table>
   </div>
 
-<script>
-  let materialCount = 1;
+  <script>
+    let materialCount = 1;
 
-  function addMaterialRow() {
-    materialCount++;
-    const container = document.getElementById("materialsContainer");
-    const newRow = document.createElement("div");
-    newRow.className = "material-row";
-    newRow.style.cssText =
-      "display: grid; grid-template-columns: 2fr 1fr 80px; gap: 10px; margin-bottom: 10px; align-items: end;";
-    newRow.innerHTML = `
-      <div class="input-group">
+    function addMaterialRow() {
+      materialCount++;
+      const container = document.getElementById("materialsContainer");
+      const newRow = document.createElement("div");
+      newRow.className = "material-row";
+      newRow.style.cssText =
+        "display: grid; grid-template-columns: 2fr 1fr 80px; gap: 10px; margin-bottom: 10px; align-items: end;";
+      newRow.innerHTML = `
+        <div class="input-group">
           <label>Material:</label>
           <select class="material-type">
-              <option value="M SAND">M SAND</option>
-              <option value="12mm">12mm</option>
-              <option value="20mm">20mm</option>
-              <option value="40mm">40mm</option>
-              <option value="WETMIX">WETMIX</option>
+            <option value="M SAND">M SAND</option>
+            <option value="12mm">12mm</option>
+            <option value="20mm">20mm</option>
+            <option value="40mm">40mm</option>
+            <option value="WETMIX">WETMIX</option>
           </select>
-      </div>
-      <div class="input-group">
+        </div>
+        <div class="input-group">
           <label>Quantity (tons):</label>
           <input type="number" class="material-qty" placeholder="Enter quantity" min="0" step="0.01" />
-      </div>
-      <button onclick="this.parentElement.remove()" style="margin: 0; background-color: #f44336;">Remove</button>
-    `;
-    container.appendChild(newRow);
-  }
-
-  function numberToWords(num) {
-    const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"];
-    const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
-    const teens = [
-      "Ten",
-      "Eleven",
-      "Twelve",
-      "Thirteen",
-      "Fourteen",
-      "Fifteen",
-      "Sixteen",
-      "Seventeen",
-      "Eighteen",
-      "Nineteen",
-    ];
-
-    if (num === 0) return "Zero";
-
-    function convertLessThanThousand(n) {
-      if (n === 0) return "";
-      if (n < 10) return ones[n];
-      if (n < 20) return teens[n - 10];
-      if (n < 100)
-        return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? " " + ones[n % 10] : "");
-      return (
-        ones[Math.floor(n / 100)] +
-        " Hundred" +
-        (n % 100 !== 0 ? " " + convertLessThanThousand(n % 100) : "")
-      );
+        </div>
+        <button onclick="this.parentElement.remove()" style="margin: 0; background-color: #f44336;">Remove</button>
+      `;
+      container.appendChild(newRow);
     }
 
-    function convert(n) {
-      if (n === 0) return "";
-      if (n < 1000) return convertLessThanThousand(n);
-      if (n < 100000) {
+    function numberToWords(num) {
+      const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"];
+      const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+      const teens = [
+        "Ten","Eleven","Twelve","Thirteen","Fourteen",
+        "Fifteen","Sixteen","Seventeen","Eighteen","Nineteen"
+      ];
+
+      if (num === 0) return "Zero";
+
+      function convertLessThanThousand(n) {
+        if (n === 0) return "";
+        if (n < 10) return ones[n];
+        if (n < 20) return teens[n - 10];
+        if (n < 100)
+          return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? " " + ones[n % 10] : "");
         return (
-          convertLessThanThousand(Math.floor(n / 1000)) +
-          " Thousand" +
-          (n % 1000 !== 0 ? " " + convertLessThanThousand(n % 1000) : "")
+          ones[Math.floor(n / 100)] +
+          " Hundred" +
+          (n % 100 !== 0 ? " " + convertLessThanThousand(n % 100) : "")
         );
       }
-      if (n < 10000000) {
+
+      function convert(n) {
+        if (n === 0) return "";
+        if (n < 1000) return convertLessThanThousand(n);
+        if (n < 100000) {
+          return (
+            convertLessThanThousand(Math.floor(n / 1000)) +
+            " Thousand" +
+            (n % 1000 !== 0 ? " " + convertLessThanThousand(n % 1000) : "")
+          );
+        }
+        if (n < 10000000) {
+          return (
+            convertLessThanThousand(Math.floor(n / 100000)) +
+            " Lakh" +
+            (n % 100000 !== 0 ? " " + convert(n % 100000) : "")
+          );
+        }
         return (
-          convertLessThanThousand(Math.floor(n / 100000)) +
-          " Lakh" +
-          (n % 100000 !== 0 ? " " + convert(n % 100000) : "")
+          convertLessThanThousand(Math.floor(n / 10000000)) +
+          " Crore" +
+          (n % 10000000 !== 0 ? " " + convert(n % 10000000) : "")
         );
       }
-      return (
-        convertLessThanThousand(Math.floor(n / 10000000)) +
-        " Crore" +
-        (n % 10000000 !== 0 ? " " + convert(n % 10000000) : "")
-      );
-    }
 
-    const rupees = Math.floor(num);
-    const paise = Math.round((num - rupees) * 100);
+      const rupees = Math.floor(num);
+      const paise = Math.round((num - rupees) * 100);
 
-    let result = convert(rupees) + " Rupees";
-    if (paise > 0) {
-      result += " and " + convert(paise) + " Paise";
-    }
-    return result + " Only";
-  }
-
-  function generateInvoice() {
-    const invoiceNo = document.getElementById("invoiceNo").value;
-    const invoiceDate = document.getElementById("invoiceDate").value;
-    const deliveryDate = document.getElementById("deliveryDate").value;
-    const vehicleNo = document.getElementById("vehicleNo").value;
-
-    if (!invoiceNo || !invoiceDate || !deliveryDate || !vehicleNo) {
-      alert("Please fill in all required fields");
-      return;
-    }
-
-    const materials = [];
-    const materialRows = document.querySelectorAll(".material-row");
-
-    materialRows.forEach((row) => {
-      const type = row.querySelector(".material-type").value;
-      const qty = parseFloat(row.querySelector(".material-qty").value);
-      if (qty > 0) {
-        materials.push({ type, qty });
+      let result = convert(rupees) + " Rupees";
+      if (paise > 0) {
+        result += " and " + convert(paise) + " Paise";
       }
-    });
-
-    if (materials.length === 0) {
-      alert("Please add at least one material with quantity");
-      return;
+      return result + " Only";
     }
 
-    document.getElementById("displayInvoiceNo").textContent = invoiceNo;
-    document.getElementById("displayDate").textContent = new Date(invoiceDate).toLocaleDateString("en-GB");
-    document.getElementById("displayDeliveryDate").textContent = new Date(deliveryDate).toLocaleDateString("en-GB");
-    document.getElementById("displayVehicle").textContent = vehicleNo;
+    function generateInvoice() {
+      const invoiceNo = document.getElementById("invoiceNo").value;
+      const invoiceDate = document.getElementById("invoiceDate").value;
+      const deliveryDate = document.getElementById("deliveryDate").value;
+      const vehicleNo = document.getElementById("vehicleNo").value;
 
-    const materialsTable = document.getElementById("materialsTable");
-    materialsTable.innerHTML = "";
+      if (!invoiceNo || !invoiceDate || !deliveryDate || !vehicleNo) {
+        alert("Please fill in all required fields");
+        return;
+      }
 
-    let totalAmount = 0;
-    let slNo = 1;
+      const materials = [];
+      const materialRows = document.querySelectorAll(".material-row");
 
-    materials.forEach((material) => {
-      const rate = 565;
-      const amount = material.qty * rate;
-      totalAmount += amount;
+      materialRows.forEach((row) => {
+        const type = row.querySelector(".material-type").value;
+        const qty = parseFloat(row.querySelector(".material-qty").value);
+        if (qty > 0) {
+          materials.push({ type, qty });
+        }
+      });
 
-      const materialRow = `
-                <tr class="center-align">
-                    <td>${slNo}</td>
-                    <td>${material.type}</td>
-                    <td>2517</td>
-                    <td>${material.qty}</td>
-                    <td>${rate}</td>
-                    <td class="right-align">${amount.toLocaleString("en-IN")}</td>
-                </tr>
-            `;
-      materialsTable.innerHTML += materialRow;
-      slNo++;
+      if (materials.length === 0) {
+        alert("Please add at least one material with quantity");
+        return;
+      }
 
-      const mdpRate = 122;
-      const mdpAmount = material.qty * mdpRate;
-      totalAmount += mdpAmount;
+      document.getElementById("displayInvoiceNo").textContent = invoiceNo;
+      document.getElementById("displayDate").textContent =
+        new Date(invoiceDate).toLocaleDateString("en-GB");
+      document.getElementById("displayDeliveryDate").textContent =
+        new Date(deliveryDate).toLocaleDateString("en-GB");
+      document.getElementById("displayVehicle").textContent = vehicleNo;
 
-      const mdpRow = `
-                <tr class="center-align">
-                    <td>${slNo}</td>
-                    <td>MDP</td>
-                    <td>2517</td>
-                    <td>${material.qty}</td>
-                    <td>${mdpRate}</td>
-                    <td class="right-align">${mdpAmount.toLocaleString("en-IN")}</td>
-                </tr>
-            `;
-      materialsTable.innerHTML += mdpRow;
-      slNo++;
-    });
+      const materialsTable = document.getElementById("materialsTable");
+      materialsTable.innerHTML = "";
 
-    const cgst = totalAmount * 0.025;
-    const sgst = totalAmount * 0.025;
-    const grandTotal = totalAmount + cgst + sgst;
+      let totalAmount = 0;
+      let slNo = 1;
 
-    document.getElementById("cgstAmount").textContent = cgst.toLocaleString("en-IN", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-    document.getElementById("sgstAmount").textContent = sgst.toLocaleString("en-IN", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-    document.getElementById("grandTotal").textContent = grandTotal.toLocaleString("en-IN", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-    document.getElementById("amountInWords").textContent = numberToWords(grandTotal);
+      materials.forEach((material) => {
+        const rate = 565;
+        const amount = material.qty * rate;
+        totalAmount += amount;
 
-    document.getElementById("invoiceContainer").style.display = "block";
-    document.getElementById("downloadBtn").style.display = "inline-block";
-    document.getElementById("printBtn").style.display = "inline-block";
-    document.getElementById("invoiceContainer").scrollIntoView({ behavior: "smooth" });
-  }
+        const materialRow = `
+          <tr class="center-align">
+            <td>${slNo}</td>
+            <td>${material.type}</td>
+            <td>2517</td>
+            <td>${material.qty}</td>
+            <td>${rate}</td>
+            <td class="right-align">${amount.toLocaleString("en-IN")}</td>
+          </tr>`;
+        materialsTable.innerHTML += materialRow;
+        slNo++;
 
-  function downloadInvoice() {
-    const element = document.getElementById("invoiceContainer");
-    const invoiceNo = document.getElementById("invoiceNo").value;
-    const opt = {
-      margin: 0.5,
-      filename: `Invoice_${invoiceNo}.pdf`,
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-      jsPDF: { unit: "in", format: "a4", orientation: "portrait", compress: true },
-    };
-    html2pdf().set(opt).from(element).save();
-  }
+        const mdpRate = 122;
+        const mdpAmount = material.qty * mdpRate;
+        totalAmount += mdpAmount;
 
-  document.getElementById("invoiceDate").valueAsDate = new Date();
-  document.getElementById("deliveryDate").valueAsDate = new Date();
-</script>
+        const mdpRow = `
+          <tr class="center-align">
+            <td>${slNo}</td>
+            <td>MDP</td>
+            <td>2517</td>
+            <td>${material.qty}</td>
+            <td>${mdpRate}</td>
+            <td class="right-align">${mdpAmount.toLocaleString("en-IN")}</td>
+          </tr>`;
+        materialsTable.innerHTML += mdpRow;
+        slNo++;
+      });
+
+      const cgst = totalAmount * 0.025;
+      const sgst = totalAmount * 0.025;
+      const grandTotal = totalAmount + cgst + sgst;
+
+      document.getElementById("cgstAmount").textContent = cgst.toLocaleString("en-IN", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+      document.getElementById("sgstAmount").textContent = sgst.toLocaleString("en-IN", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+      document.getElementById("grandTotal").textContent = grandTotal.toLocaleString("en-IN", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+      document.getElementById("amountInWords").textContent = numberToWords(grandTotal);
+
+      document.getElementById("invoiceContainer").style.display = "block";
+      document.getElementById("downloadBtn").style.display = "inline-block";
+      document.getElementById("printBtn").style.display = "inline-block";
+      document.getElementById("invoiceContainer").scrollIntoView({ behavior: "smooth" });
+    }
+
+    function downloadInvoice() {
+      const element = document.getElementById("invoiceContainer");
+      const invoiceNo = document.getElementById("invoiceNo").value || "Invoice";
+
+      const opt = {
+        margin:       5, // mm
+        filename:     `Invoice_${invoiceNo}.pdf`,
+        image:        { type: "jpeg", quality: 0.98 },
+        html2canvas:  { scale: 0.9, useCORS: true, letterRendering: true },
+        jsPDF:        { unit: "mm", format: "a4", orientation: "portrait" },
+        pagebreak:    { mode: ["css", "legacy"] }
+      };
+
+      html2pdf().set(opt).from(element).save();
+    }
+
+    // default dates
+    document.getElementById("invoiceDate").valueAsDate = new Date();
+    document.getElementById("deliveryDate").valueAsDate = new Date();
+  </script>
 </body>
 </html>
