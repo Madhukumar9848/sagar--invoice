@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tax Invoice Generator</title>
+  <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f5f5f5;
+    }
+    .input-section {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .input-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+    .input-group {
+      display: flex;
+      flex-direction: column;
+    }
+    label {
+      font-weight: bold;
+      margin-bottom: 5px;
+      font-size: 14px;
+    }
+    input, select {
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    button {
+      background-color: #4caf50;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-right: 10px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .download-btn {
+      background-color: #ff9800;
+    }
+    .download-btn:hover {
+      background-color: #f57c00;
+    }
+    .print-btn {
+      background-color: #2196f3;
+    }
+    .print-btn:hover {
+      background-color: #0b7dda;
+    }
+    .invoice-container {
+      background: white;
+      padding: 20px;
+      margin-top: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 0;
+    }
+    td, th {
+      border: 1px solid #000;
+      padding: 8px;
+      vertical-align: top;
+    }
+    .header {
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+      padding: 15px;
+      border: 1px solid #000;
+    }
+    .bold {
+      font-weight: bold;
+    }
+    .right-align {
+      text-align: right;
+    }
+    .center-align {
+      text-align: center;
+    }
+    .terms-delivery {
+      font-size: 12px;
+    }
+    @media print {
+      .input-section {
+        display: none;
+      }
+      body {
+        background: white;
+        margin: 0;
+      }
+      .invoice-container {
+        padding: 0;
+      }
+    }
+    @media (max-width: 768px) {
+      body {
+        margin: 10px;
+      }
+      .input-row {
+        grid-template-columns: 1fr;
+      }
+      .material-row {
+        grid-template-columns: 1fr 100px 80px !important;
+        gap: 10px;
+      }
+      button {
+        padding: 8px 12px;
+        font-size: 14px;
+        margin-right: 5px;
+        margin-bottom: 5px;
+      }
+      .header {
+        font-size: 20px;
+      }
+    }
+    @media (max-width: 480px) {
+      .invoice-container {
+        padding: 10px;
+      }
+      table {
+        font-size: 12px;
+      }
+      td, th {
+        padding: 4px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="input-section">
+    <h2>Invoice Details</h2>
+    <div class="input-row">
+      <div class="input-group">
+        <label>Invoice No:</label>
+        <input type="text" id="invoiceNo" placeholder="Enter invoice number" />
+      </div>
+      <div class="input-group">
+        <label>Date:</label>
+        <input type="date" id="invoiceDate" />
+      </div>
+      <div class="input-group">
+        <label>Delivery Note Date:</label>
+        <input type="date" id="deliveryDate" />
+      </div>
+      <div class="input-group">
+        <label>Vehicle No:</label>
+        <input type="text" id="vehicleNo" placeholder="e.g., 6250&6250" />
+      </div>
+    </div>
+
+    <h3>Materials</h3>
+    <div id="materialsContainer">
+      <div
+        class="material-row"
+        style="display: grid; grid-template-columns: 2fr 1fr 80px; gap: 10px; margin-bottom: 10px; align-items: end;"
+      >
+        <div class="input-group">
+          <label>Material:</label>
+          <select class="material-type">
+            <option value="M SAND">M SAND</option>
+            <option value="12mm">12mm</option>
+            <option value="20mm">20mm</option>
+            <option value="40mm">40mm</option>
+            <option value="WETMIX">WETMIX</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Quantity (tons):</label>
+          <input type="number" class="material-qty" placeholder="Enter quantity" min="0" step="0.01" />
+        </div>
+        <button onclick="addMaterialRow()" style="margin: 0;">+ Add</button>
+      </div>
+    </div>
+
+    <div style="margin-top: 20px;">
+      <button onclick="generateInvoice()">Generate Invoice</button>
+      <button class="download-btn" onclick="downloadInvoice()" id="downloadBtn" style="display: none;">
+        Download PDF
+      </button>
+      <!-- Optional print button - can be removed if not needed -->
+      <button class="print-btn" onclick="window.print()" id="printBtn" style="display: none;">
+        Print Invoice
+      </button>
+    </div>
+  </div>
+
+  <div class="invoice-container" id="invoiceContainer" style="display: none;">
+    <div class="header">TAX INVOICE</div>
+
+    <table>
+      <tr>
+        <td colspan="2" style="width: 50%;">
+          <div class="bold">SAGAR ENTERPRISES</div>
+          <div>Chicknagavalli Village, No 9/3, Aruru post and</div>
+          <div>Grama panchayath, Mandikal Hobli, Chickballapur</div>
+          <div>taluk, Chikkaballapur, Karnataka, 562101</div>
+          <div class="bold">GST Tin no. 29ANCPM5764G2ZO</div>
+        </td>
+        <td style="width: 25%;">
+          <div>Invoice No.</div>
+          <div>Delivery Note</div>
+          <div>Reference No. & Date.</div>
+        </td>
+        <td style="width: 25%;">
+          <div class="bold"><span id="displayInvoiceNo"></span></div>
+          <div class="bold">Dated <span id="displayDate"></span></div>
+          <div>Mode/Terms of Payment</div>
+          <div>Other References</div>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2" rowspan="5">
+          <div>Consignee (Ship to)</div>
+          <div class="bold">STAR INFRATECH</div>
+          <div>Hanumanthapura village</div>
+          <div>Opposite to Range Forest Office</div>
+          <div>Social Forestry Range</div>
+          <div>Shidlaghatta Taluk</div>
+          <div>Chikkabalapura District – 562105</div>
+          <div>GSTIN/UIN: 29ACAFS7872G1ZO</div>
+          <div>State: Karnataka</div>
+        </td>
+        <td>Buyer's Order No.</td>
+        <td>Dated</td>
+      </tr>
+      <tr>
+        <td>Dispatch Doc No.</td>
+        <td>Delivery Note Date : <span id="displayDeliveryDate"></span></td>
+      </tr>
+      <tr>
+        <td>Dispatched through <span style="float: right;" class="bold">Road</span></td>
+        <td class="bold">Destination</td>
+      </tr>
+      <tr>
+        <td rowspan="2">&nbsp;</td>
+        <td rowspan="2">&nbsp;</td>
+      </tr>
+      <tr></tr>
+      <tr>
+        <td colspan="2" rowspan="3">
+          <div>Buyer (Bill to)</div>
+          <div class="bold">STAR INFRATECH</div>
+          <div>Hanumanthapura village</div>
+          <div>Opposite to Range Forest Office</div>
+          <div>Social Forestry Range</div>
+          <div>Shidlaghatta Taluk</div>
+          <div>Chikkabalapura District – 562105</div>
+          <div>GSTIN/UIN: 29ACAFS7872G1ZO</div>
+          <div>State: Karnataka</div>
+        </td>
+        <td>Bill of Lading/LR-RR No.</td>
+        <td>Motor Vehicle No. <span id="displayVehicle"></span></td>
+      </tr>
+      <tr>
+        <td colspan="2" class="terms-delivery">
+          <strong>Terms of Delivery:</strong><br />
+          1. Delivery:Delivery as per customer requirement.<br />
+          2. Quality Assurance: All materials supplied will be of VSI quality the and meet the IS standards and specifications.<br />
+          
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2">&nbsp;</td>
+      </tr>
+    </table>
+
+    <table>
+      <tr class="bold center-align">
+        <td style="width: 8%;">SI No</td>
+        <td style="width: 37%;">Description of Goods</td>
+        <td style="width: 15%;">HSN/SAC</td>
+        <td style="width: 10%;">QTY</td>
+        <td style="width: 15%;">RATE</td>
+        <td style="width: 15%;">Amount Rs.</td>
+      </tr>
+      <tbody id="materialsTable"></tbody>
+      <tr>
+        <td>&nbsp;</td>
+        <td>CGST@2.5%</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td class="right-align bold" id="cgstAmount"></td>
+      </tr>
+      <tr>
+        <td>&nbsp;</td>
+        <td>SGST@2.5%</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td class="right-align bold" id="sgstAmount"></td>
+      </tr>
+      <tr class="bold">
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td colspan="2" class="right-align">Total</td>
+        <td class="right-align" id="grandTotal"></td>
+      </tr>
+    </table>
+
+    <table>
+      <tr>
+        <td colspan="4">
+          <div>Amount Chargeable (in words)</div>
+          <div class="bold" style="margin-top: 10px;" id="amountInWords"></div>
+        </td>
+      </tr>
+      <tr>
+        <td style="width: 50%;" rowspan="2">
+          <div class="bold">Declaration</div>
+          <div style="margin-top: 20px;">We declare that this invoice shows the actual price of the goods</div>
+        </td>
+        <td colspan="3" class="bold right-align">SAGAR ENTERPRISES</td>
+      </tr>
+      <tr>
+        <td colspan="3" style="height: 80px; vertical-align: bottom;" class="bold right-align">
+          Authorised Signatory
+        </td>
+      </tr>
+    </table>
+  </div>
+
+<script>
+  let materialCount = 1;
+
+  function addMaterialRow() {
+    materialCount++;
+    const container = document.getElementById("materialsContainer");
+    const newRow = document.createElement("div");
+    newRow.className = "material-row";
+    newRow.style.cssText =
+      "display: grid; grid-template-columns: 2fr 1fr 80px; gap: 10px; margin-bottom: 10px; align-items: end;";
+    newRow.innerHTML = `
+      <div class="input-group">
+          <label>Material:</label>
+          <select class="material-type">
+              <option value="M SAND">M SAND</option>
+              <option value="12mm">12mm</option>
+              <option value="20mm">20mm</option>
+              <option value="40mm">40mm</option>
+              <option value="WETMIX">WETMIX</option>
+          </select>
+      </div>
+      <div class="input-group">
+          <label>Quantity (tons):</label>
+          <input type="number" class="material-qty" placeholder="Enter quantity" min="0" step="0.01" />
+      </div>
+      <button onclick="this.parentElement.remove()" style="margin: 0; background-color: #f44336;">Remove</button>
+    `;
+    container.appendChild(newRow);
+  }
+
+  function numberToWords(num) {
+    const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"];
+    const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+    const teens = [
+      "Ten",
+      "Eleven",
+      "Twelve",
+      "Thirteen",
+      "Fourteen",
+      "Fifteen",
+      "Sixteen",
+      "Seventeen",
+      "Eighteen",
+      "Nineteen",
+    ];
+
+    if (num === 0) return "Zero";
+
+    function convertLessThanThousand(n) {
+      if (n === 0) return "";
+      if (n < 10) return ones[n];
+      if (n < 20) return teens[n - 10];
+      if (n < 100)
+        return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? " " + ones[n % 10] : "");
+      return (
+        ones[Math.floor(n / 100)] +
+        " Hundred" +
+        (n % 100 !== 0 ? " " + convertLessThanThousand(n % 100) : "")
+      );
+    }
+
+    function convert(n) {
+      if (n === 0) return "";
+      if (n < 1000) return convertLessThanThousand(n);
+      if (n < 100000) {
+        return (
+          convertLessThanThousand(Math.floor(n / 1000)) +
+          " Thousand" +
+          (n % 1000 !== 0 ? " " + convertLessThanThousand(n % 1000) : "")
+        );
+      }
+      if (n < 10000000) {
+        return (
+          convertLessThanThousand(Math.floor(n / 100000)) +
+          " Lakh" +
+          (n % 100000 !== 0 ? " " + convert(n % 100000) : "")
+        );
+      }
+      return (
+        convertLessThanThousand(Math.floor(n / 10000000)) +
+        " Crore" +
+        (n % 10000000 !== 0 ? " " + convert(n % 10000000) : "")
+      );
+    }
+
+    const rupees = Math.floor(num);
+    const paise = Math.round((num - rupees) * 100);
+
+    let result = convert(rupees) + " Rupees";
+    if (paise > 0) {
+      result += " and " + convert(paise) + " Paise";
+    }
+    return result + " Only";
+  }
+
+  function generateInvoice() {
+    const invoiceNo = document.getElementById("invoiceNo").value;
+    const invoiceDate = document.getElementById("invoiceDate").value;
+    const deliveryDate = document.getElementById("deliveryDate").value;
+    const vehicleNo = document.getElementById("vehicleNo").value;
+
+    if (!invoiceNo || !invoiceDate || !deliveryDate || !vehicleNo) {
+      alert("Please fill in all required fields");
+      return;
+    }
+
+    const materials = [];
+    const materialRows = document.querySelectorAll(".material-row");
+
+    materialRows.forEach((row) => {
+      const type = row.querySelector(".material-type").value;
+      const qty = parseFloat(row.querySelector(".material-qty").value);
+      if (qty > 0) {
+        materials.push({ type, qty });
+      }
+    });
+
+    if (materials.length === 0) {
+      alert("Please add at least one material with quantity");
+      return;
+    }
+
+    document.getElementById("displayInvoiceNo").textContent = invoiceNo;
+    document.getElementById("displayDate").textContent = new Date(invoiceDate).toLocaleDateString("en-GB");
+    document.getElementById("displayDeliveryDate").textContent = new Date(deliveryDate).toLocaleDateString("en-GB");
+    document.getElementById("displayVehicle").textContent = vehicleNo;
+
+    const materialsTable = document.getElementById("materialsTable");
+    materialsTable.innerHTML = "";
+
+    let totalAmount = 0;
+    let slNo = 1;
+
+    materials.forEach((material) => {
+      const rate = 565;
+      const amount = material.qty * rate;
+      totalAmount += amount;
+
+      const materialRow = `
+                <tr class="center-align">
+                    <td>${slNo}</td>
+                    <td>${material.type}</td>
+                    <td>2517</td>
+                    <td>${material.qty}</td>
+                    <td>${rate}</td>
+                    <td class="right-align">${amount.toLocaleString("en-IN")}</td>
+                </tr>
+            `;
+      materialsTable.innerHTML += materialRow;
+      slNo++;
+
+      const mdpRate = 122;
+      const mdpAmount = material.qty * mdpRate;
+      totalAmount += mdpAmount;
+
+      const mdpRow = `
+                <tr class="center-align">
+                    <td>${slNo}</td>
+                    <td>MDP</td>
+                    <td>2517</td>
+                    <td>${material.qty}</td>
+                    <td>${mdpRate}</td>
+                    <td class="right-align">${mdpAmount.toLocaleString("en-IN")}</td>
+                </tr>
+            `;
+      materialsTable.innerHTML += mdpRow;
+      slNo++;
+    });
+
+    const cgst = totalAmount * 0.025;
+    const sgst = totalAmount * 0.025;
+    const grandTotal = totalAmount + cgst + sgst;
+
+    document.getElementById("cgstAmount").textContent = cgst.toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    document.getElementById("sgstAmount").textContent = sgst.toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    document.getElementById("grandTotal").textContent = grandTotal.toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    document.getElementById("amountInWords").textContent = numberToWords(grandTotal);
+
+    document.getElementById("invoiceContainer").style.display = "block";
+    document.getElementById("downloadBtn").style.display = "inline-block";
+    document.getElementById("printBtn").style.display = "inline-block";
+    document.getElementById("invoiceContainer").scrollIntoView({ behavior: "smooth" });
+  }
+
+  function downloadInvoice() {
+    const element = document.getElementById("invoiceContainer");
+    const invoiceNo = document.getElementById("invoiceNo").value;
+    const opt = {
+      margin: 0.5,
+      filename: `Invoice_${invoiceNo}.pdf`,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+      jsPDF: { unit: "in", format: "a4", orientation: "portrait", compress: true },
+    };
+    html2pdf().set(opt).from(element).save();
+  }
+
+  document.getElementById("invoiceDate").valueAsDate = new Date();
+  document.getElementById("deliveryDate").valueAsDate = new Date();
+</script>
+</body>
+</html>
